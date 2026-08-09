@@ -49,7 +49,7 @@ HTML_LAYOUT = """
         .song-card { border-bottom: 1px solid #ddd; padding: 15px 0; display: flex; align-items: center; gap: 15px; }
         .song-card img { width: 120px; height: 90px; object-fit: cover; border-radius: 6px; }
         .song-info { flex: 1; }
-        .download-btn { background: #8E24AA; color: white; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block; margin-top: 5px; }
+        audio { width: 100%; margin-top: 10px; height: 35px; }
         .admin-box { background: #fff3cd; border: 1px solid #ffeba2; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
         .admin-box input, .admin-box select { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }
         .admin-box button { width: 100%; padding: 10px; background: #8E24AA; color: white; border: none; font-weight: bold; cursor: pointer; }
@@ -97,8 +97,11 @@ HTML_LAYOUT = """
                     <img src="https://img.youtube.com/vi/{{ song.video_id }}/hqdefault.jpg" alt="Song Thumbnail">
                     <div class="song-info">
                         <strong>{{ song.title }}</strong><br>
-                        <small style="color: #666;">Category: {{ song.category }}</small><br><br>
-                        <a href="https://y2mate.is/en/youtube-to-mp3/{{ song.video_id }}" target="_blank" class="download-btn">⬇️ Download MP3</a>
+                        <small style="color: #666;">Category: {{ song.category }}</small><br>
+                        <audio controls preload="none">
+                            <source src="https://inv.tux.im/latest_version?id={{ song.video_id }}&itag=140" type="audio/mp4">
+                            Your browser does not support the audio element.
+                        </audio>
                     </div>
                 </div>
                 {% endfor %}
