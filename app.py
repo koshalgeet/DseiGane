@@ -1,6 +1,8 @@
 import os
 import json
-from flask import Flask, render_template_string, request, redirect, url_for
+import re
+from flask import Flask, render_template_string, request, redirect, url_for, Response, stream_with_context
+import yt_dlp
 
 app = Flask(__name__)
 
@@ -18,6 +20,13 @@ def load_songs():
 def save_songs(songs):
     with open(METADATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(songs, f, indent=4)
+
+def extract_video_id(url):
+    regex = r"(?:v=|\/([0-9A-Za-z_-]{11}).*|youtu\.be\/)([0-9A-Za-z_-]{11})"
+    match = re.search(regex, url)
+    if match:
+        return match.group(1) or match.group(2)
+    return None
 
 HTML_LAYOUT = """
 <!DOCTYPE html>
@@ -39,10 +48,9 @@ HTML_LAYOUT = """
         .categories li a:hover { background: #8E24AA; color: #fff; }
         .main-content { flex: 1; background: #fff; padding: 15px; border-radius: 5px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
         .song-card { border-bottom: 1px solid #ddd; padding: 15px 0; display: flex; align-items: center; gap: 15px; }
-        .song-card img { width: 110px; height: 85px; object-fit: cover; border-radius: 6px; }
+        .song-card img { width: 120px; height: 90px; object-fit: cover; border-radius: 6px; }
         .song-info { flex: 1; }
-        audio { width: 100%; margin-top: 8px; height: 35px; }
-        .download-btn { background: #8E24AA; color: white; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 13px; display: inline-block; margin-top: 6px; }
+        .download-btn { background: #8E24AA; color: white; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 13px; display: inline-block; margin-top: 8px; }
         .download-btn:hover { background: #6A1B9A; }
         .admin-box { background: #fff3cd; border: 1px solid #ffeba2; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
         .admin-box input, .admin-box select { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }
@@ -64,8 +72,7 @@ HTML_LAYOUT = """
                 ⚡ <b>Admin Uploader</b>
                 <form method="POST" action="/admin">
                     <input type="text" name="song_title" placeholder="Song Title / Naam" required>
-                    <input type="text" name="image_url" placeholder="Cover Image Link (URL)" required>
-                    <input type="text" name="mp3_url" placeholder="Direct MP3 Link (.mp3 URL)" required>
+                    <input type="text" name="youtube_url" placeholder="YouTube Video URL" required>
                     <select name="category" required>
                         <option value="">-- Select Category --</option>
                         {% for cat in categories %}
@@ -89,14 +96,11 @@ HTML_LAYOUT = """
             {% if songs %}
                 {% for song in songs %}
                 <div class="song-card">
-                    <img src="{{ song.image_url }}" alt="Song Cover" onerror="this.src='https://via.placeholder.com/110x85?text=No+Image'">
+                    <img src="https://img.youtube.com/vi/{{ song.video_id }}/hqdefault.jpg" alt="Song Cover">
                     <div class="song-info">
                         <strong>{{ song.title }}</strong><br>
                         <small style="color: #666;">Category: {{ song.category }}</small><br>
-                        <audio controls preload="none">
-                            <source src="{{ song.mp3_url }}" type="audio/mpeg">
-                        </audio><br>
-                        <a href="{{ song.mp3_url }}" download="{{ song.title }}.mp3" class="download-btn">⬇️ Direct Download MP3</a>
+                        <a href="/download/{{ song.video_id }}" class="download-btn">⬇️ Download Audio Direct</a>
                     </div>
                 </div>
                 {% endfor %}
@@ -143,23 +147,54 @@ def category(cat_name):
         is_admin=False
     )
 
+@app.route('/download/<video_id>')
+def download_audio(video_id):
+    yt_url = f"https://www.youtube.com/watch?v={video_id}"
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'quiet': True,
+        'no_warnings': True,
+    }
+    
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(yt_url, download=False)
+            audio_url = info['url']
+            title = info.get('title', 'song').replace('"', '')
+            
+        import urllib.request
+        req = urllib.request.urlopen(audio_url)
+        
+        def generate():
+            while True:
+                chunk = req.read(1024 * 64)
+                if not chunk:
+                    break
+                yield chunk
+
+        response = Response(stream_with_context(generate()), content_type='audio/mpeg')
+        response.headers['Content-Disposition'] = f'attachment; filename="{title}.mp3"'
+        return response
+    except Exception as e:
+        return f"Download failed: {str(e)}", 500
+
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     songs = load_songs()
     if request.method == 'POST':
         title = request.form.get('song_title')
-        image_url = request.form.get('image_url')
-        mp3_url = request.form.get('mp3_url')
+        url = request.form.get('youtube_url')
         cat = request.form.get('category')
+        video_id = extract_video_id(url)
         
-        new_song = {
-            'title': title,
-            'image_url': image_url,
-            'mp3_url': mp3_url,
-            'category': cat
-        }
-        songs.append(new_song)
-        save_songs(songs)
+        if video_id:
+            new_song = {
+                'title': title,
+                'video_id': video_id,
+                'category': cat
+            }
+            songs.append(new_song)
+            save_songs(songs)
             
         return redirect(url_for('admin'))
         
