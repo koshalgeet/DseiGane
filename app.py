@@ -49,13 +49,11 @@ HTML_LAYOUT = """
         .song-card { border-bottom: 1px solid #ddd; padding: 15px 0; display: flex; align-items: center; gap: 15px; }
         .song-card img { width: 120px; height: 90px; object-fit: cover; border-radius: 6px; }
         .song-info { flex: 1; }
-        .btn-container { margin-top: 10px; display: flex; gap: 10px; }
-        .download-btn { background: #8E24AA; color: white; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; border: none; cursor: pointer; }
+        .download-btn { background: #8E24AA; color: white; padding: 10px 18px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 10px; }
         .download-btn:hover { background: #6A1B9A; }
         .admin-box { background: #fff3cd; border: 1px solid #ffeba2; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
         .admin-box input, .admin-box select { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }
         .admin-box button { width: 100%; padding: 10px; background: #8E24AA; color: white; border: none; font-weight: bold; cursor: pointer; }
-        iframe { border: none; width: 100%; height: 60px; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -100,8 +98,8 @@ HTML_LAYOUT = """
                     <img src="https://img.youtube.com/vi/{{ song.video_id }}/hqdefault.jpg" alt="Song Thumbnail">
                     <div class="song-info">
                         <strong>{{ song.title }}</strong><br>
-                        <small style="color: #666;">Category: {{ song.category }}</small>
-                        <iframe src="https://loader.to/api/card/?url=https://www.youtube.com/watch?v={{ song.video_id }}&f=mp3&color=8e24aa" scrolling="no"></iframe>
+                        <small style="color: #666;">Category: {{ song.category }}</small><br>
+                        <a href="https://ytmp3.nu/{{ song.video_id }}/" target="_blank" class="download-btn">⬇️ Download MP3 Audio</a>
                     </div>
                 </div>
                 {% endfor %}
