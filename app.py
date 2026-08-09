@@ -39,8 +39,10 @@ HTML_LAYOUT = """
         .categories li a { display: block; padding: 8px; margin-bottom: 5px; background: #f9f9f9; text-decoration: none; color: #333; font-weight: bold; border-left: 4px solid #8E24AA; }
         .categories li a:hover { background: #8E24AA; color: #fff; }
         .main-content { flex: 1; background: #fff; padding: 15px; border-radius: 5px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
-        .song-card { border-bottom: 1px solid #ddd; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
-        .download-btn { background: #8E24AA; color: white; padding: 8px 12px; text-decoration: none; border-radius: 4px; font-weight: bold; }
+        .song-card { border-bottom: 1px solid #ddd; padding: 12px 0; display: flex; align-items: center; gap: 15px; }
+        .song-card img { width: 100px; height: 75px; object-fit: cover; border-radius: 4px; }
+        .song-info { flex: 1; }
+        .download-btn { background: #8E24AA; color: white; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block; }
         .admin-box { background: #fff3cd; border: 1px solid #ffeba2; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
         .admin-box input, .admin-box select { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }
         .admin-box button { width: 100%; padding: 10px; background: #8E24AA; color: white; border: none; font-weight: bold; cursor: pointer; }
@@ -84,11 +86,12 @@ HTML_LAYOUT = """
             {% if songs %}
                 {% for song in songs %}
                 <div class="song-card">
-                    <div>
+                    <img src="{{ song.thumbnail }}" alt="Song Image" onerror="this.src='https://via.placeholder.com/100x75?text=No+Image'">
+                    <div class="song-info">
                         <strong>{{ song.title }}</strong><br>
-                        <small>Category: {{ song.category }}</small>
+                        <small style="color: #666;">Category: {{ song.category }}</small><br><br>
+                        <a href="{{ song.audio_url or song.url }}" target="_blank" download class="download-btn">Download / Play MP3</a>
                     </div>
-                    <a href="{{ song.url }}" target="_blank" class="download-btn">Download / Play</a>
                 </div>
                 {% endfor %}
             {% else %}
@@ -141,15 +144,19 @@ def admin():
         url = request.form.get('youtube_url')
         cat = request.form.get('category')
         
-        ydl_opts = {'quiet': True, 'skip_download': True}
+        ydl_opts = {'format': 'bestaudio/best', 'quiet': True}
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 title = info.get('title', 'Unknown Title')
+                thumbnail = info.get('thumbnail', '')
+                audio_url = info.get('url', url)
                 
                 new_song = {
                     'title': title,
                     'url': url,
+                    'audio_url': audio_url,
+                    'thumbnail': thumbnail,
                     'category': cat
                 }
                 songs.append(new_song)
