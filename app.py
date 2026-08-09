@@ -1,18 +1,7 @@
-Screenshot me error bilkul saaf hai: YouTube ne Render server ki IP ko Cloud Server samjh kar block kar diya hai (Sign in to confirm you're not a bot). YouTube cloud servers (Render, Heroku, AWS) se direct scraping allow nahi karta.
-
-Iska 100% working solution ye hai ki hum background me Cobalt API / Public Proxy API ka use karein. Isse Render ka IP block bypass ho jayega aur user ko bilkul same aapki hi site se audio download milega, bina kisi external website par redirect huye.
-
-app.py me bas download wale function ko update karna hai:
-
-Step 1: app.py Ko Update Karein
-GitHub repo me app.py edit karein aur saara code mita kar ye pasting kar dein:
-
-Python
 import os
 import json
 import re
-import requests
-from flask import Flask, render_template_string, request, redirect, url_for, Response, stream_with_context
+from flask import Flask, render_template_string, request, redirect, url_for
 
 app = Flask(__name__)
 
@@ -60,7 +49,7 @@ HTML_LAYOUT = """
         .song-card { border-bottom: 1px solid #ddd; padding: 15px 0; display: flex; align-items: center; gap: 15px; }
         .song-card img { width: 120px; height: 90px; object-fit: cover; border-radius: 6px; }
         .song-info { flex: 1; }
-        .download-btn { background: #8E24AA; color: white; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 13px; display: inline-block; margin-top: 8px; }
+        .download-btn { background: #8E24AA; color: white; border: none; padding: 9px 16px; border-radius: 4px; font-weight: bold; font-size: 13px; cursor: pointer; margin-top: 8px; }
         .download-btn:hover { background: #6A1B9A; }
         .admin-box { background: #fff3cd; border: 1px solid #ffeba2; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
         .admin-box input, .admin-box select { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }
@@ -110,7 +99,11 @@ HTML_LAYOUT = """
                     <div class="song-info">
                         <strong>{{ song.title }}</strong><br>
                         <small style="color: #666;">Category: {{ song.category }}</small><br>
-                        <a href="/download/{{ song.video_id }}" class="download-btn">⬇️ Download Audio Direct</a>
+                        
+                        <form action="https://y2mate.nu/download" method="GET" style="display:inline;" target="download_frame">
+                            <input type="hidden" name="v" value="{{ song.video_id }}">
+                            <button type="submit" class="download-btn">⬇️ Download Audio Direct</button>
+                        </form>
                     </div>
                 </div>
                 {% endfor %}
@@ -119,6 +112,8 @@ HTML_LAYOUT = """
             {% endif %}
         </div>
     </div>
+    
+    <iframe name="download_frame" style="display:none;"></iframe>
 </body>
 </html>
 """
@@ -156,45 +151,6 @@ def category(cat_name):
         search_query="",
         is_admin=False
     )
-
-@app.route('/download/<video_id>')
-def download_audio(video_id):
-    yt_url = f"https://www.youtube.com/watch?v={video_id}"
-    
-    # Using Cobalt API endpoint to get clean audio stream URL
-    api_url = "https://co.wuk.sh/api/json"
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "url": yt_url,
-        "isAudioOnly": True,
-        "aFormat": "mp3"
-    }
-    
-    try:
-        res = requests.post(api_url, json=payload, headers=headers, timeout=10)
-        data = res.json()
-        
-        audio_stream_url = data.get("url")
-        if not audio_stream_url:
-            return "Unable to fetch audio. Please try again.", 500
-            
-        # Stream response back to user directly from your site
-        r = requests.get(audio_stream_url, stream=True)
-        
-        def generate():
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    yield chunk
-
-        response = Response(stream_with_context(generate()), content_type='audio/mpeg')
-        response.headers['Content-Disposition'] = f'attachment; filename="song_{video_id}.mp3"'
-        return response
-
-    except Exception as e:
-        return f"Download Failed: {str(e)}", 500
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
