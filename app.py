@@ -49,12 +49,12 @@ HTML_LAYOUT = """
         .song-card { border-bottom: 1px solid #ddd; padding: 15px 0; display: flex; align-items: center; gap: 15px; }
         .song-card img { width: 120px; height: 90px; object-fit: cover; border-radius: 6px; }
         .song-info { flex: 1; }
-        .btn-container { margin-top: 10px; display: flex; gap: 10px; align-items: center; }
-        .download-btn { background: #8E24AA; color: white; border: none; padding: 10px 16px; border-radius: 4px; font-weight: bold; font-size: 13px; cursor: pointer; display: inline-block; text-decoration: none; }
+        .download-btn { background: #8E24AA; color: white; border: none; padding: 9px 16px; border-radius: 4px; font-weight: bold; font-size: 13px; cursor: pointer; margin-top: 8px; }
         .download-btn:hover { background: #6A1B9A; }
         .admin-box { background: #fff3cd; border: 1px solid #ffeba2; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
         .admin-box input, .admin-box select { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }
         .admin-box button { width: 100%; padding: 10px; background: #8E24AA; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .downloader-frame { width: 100%; height: 60px; border: none; margin-top: 5px; overflow: hidden; }
     </style>
 </head>
 <body>
@@ -100,11 +100,7 @@ HTML_LAYOUT = """
                     <div class="song-info">
                         <strong>{{ song.title }}</strong><br>
                         <small style="color: #666;">Category: {{ song.category }}</small><br>
-                        <div class="btn-container">
-                            <button class="download-btn" onclick="startDownload('{{ song.video_id }}', '{{ song.title }}', this)">
-                                ⬇️ Download MP3 Direct
-                            </button>
-                        </div>
+                        <iframe class="downloader-frame" src="https://loader.to/api/card/?url=https://www.youtube.com/watch?v={{ song.video_id }}&f=mp3&color=8E24AA"></iframe>
                     </div>
                 </div>
                 {% endfor %}
@@ -113,48 +109,6 @@ HTML_LAYOUT = """
             {% endif %}
         </div>
     </div>
-
-    <script>
-        async function startDownload(videoId, title, btn) {
-            btn.innerText = '⏳ Converting MP3...';
-            btn.disabled = true;
-
-            try {
-                const response = await fetch(`https://api.cobalt.tools/`, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        url: `https://www.youtube.com/watch?v=${videoId}`,
-                        isAudioOnly: true,
-                        aFormat: 'mp3'
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.url) {
-                    const a = document.createElement('a');
-                    a.href = data.url;
-                    a.download = `${title}.mp3`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    btn.innerText = '✅ Download Started';
-                } else {
-                    alert('Conversion failed. Please try again.');
-                    btn.innerText = '⬇️ Download MP3 Direct';
-                }
-            } catch (err) {
-                alert('Connection error! Please retry.');
-                btn.innerText = '⬇️ Download MP3 Direct';
-            } finally {
-                btn.disabled = false;
-            }
-        }
-    </script>
 </body>
 </html>
 """
